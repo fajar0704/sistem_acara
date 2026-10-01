@@ -6,57 +6,99 @@ use App\Models\Event;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class EventUserController extends Controller
 {
-    public function index(){
-        $events = Event::paginate(5);
+    public function index()
+    {
+        $events = Event::latest()->paginate(6);
         return view('user.event.index', compact('events'));
     }
 
     public function payment($slug)
     {
-        $event = Event::where('slug', $slug)->first();
-        $trans = new Transaction;
-        $trans->user_id = Auth::user()->id;
-        $trans->event_id = $event->id;
-        $trans->price = $event->price;
-        // Set your Merchant Server Key
-        \Midtrans\Config::$serverKey = config('midtrans.serverKey');
-        // Set to Development/Sandbox Environment (default). Set to true for Production Environment (accept real transaction).
-        \Midtrans\Config::$isProduction = false;
-        // Set sanitization on (default)
-        \Midtrans\Config::$isSanitized = true;
-        // Set 3DS transaction for credit card to true
-        \Midtrans\Config::$is3ds = true;
+        $event = Event::where('slug', $slug)->firstOrFail();
 
-        $params = array(
-            'transaction_details' => array(
-                'order_id' => rand(),
-                'gross_amount' => $trans->price,
-            ),
-            'customer_details' => array(
+        if ($event->status !== 'Opened') {
+            return redirect()->route('user.event')->with('error', 'Acara ini sudah ditutup.');
+        }
+
+        // Check if user already has a Paid transaction for this event
+        $alreadyPaid = Transaction::where('user_id', Auth::id())
+            ->where('event_id', $event->id)
+            ->where('status', 'Paid')
+            ->first();
+
+        if ($alreadyPaid) {
+            return redirect()->route('user.event.myEvent')->with('info', 'Anda sudah terdaftar pada acara ini.');
+        }
+
+        // Reuse an existing Pending transaction or create a new one
+        $trans = Transaction::where('user_id', Auth::id())
+            ->where('event_id', $event->id)
+            ->where('status', 'Pending')
+            ->latest()
+            ->first();
+
+        if (!$trans) {
+            $trans = new Transaction;
+            $trans->user_id = Auth::id();
+            $trans->event_id = $event->id;
+            $trans->price = $event->price;
+            $trans->status = 'Pending';
+            $trans->save();
+        }
+
+        // Midtrans configuration
+        \Midtrans\Config::$serverKey = config('midtrans.serverKey');
+        \Midtrans\Config::$isProduction = config('midtrans.isProduction', false);
+        \Midtrans\Config::$isSanitized = config('midtrans.isSanitized', true);
+        \Midtrans\Config::$is3ds = config('midtrans.is3ds', true);
+
+        $orderId = 'ORDER-' . $trans->id . '-' . time();
+        $params = [
+            'transaction_details' => [
+                'order_id' => $orderId,
+                'gross_amount' => (int) $trans->price,
+            ],
+            'customer_details' => [
                 'first_name' => Auth::user()->name,
-                'email' => Auth::user()->email
-            )
-        );
-        
-        $snapToken = \Midtrans\Snap::getSnapToken($params);
-        $trans->snap_token = $snapToken;
-        $trans->save();
+                'email' => Auth::user()->email,
+            ],
+        ];
+
+        try {
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+            $trans->snap_token = $snapToken;
+            $trans->save();
+        } catch (\Exception $e) {
+            Log::error('Midtrans Snap Token Error: ' . $e->getMessage());
+        }
 
         return view('user.event.payment', compact('event', 'trans'));
     }
 
     public function success(Transaction $trans)
     {
-        $trans->status = str('Paid');
-        $trans->update();
-        return redirect()->route('user.event.myEvent')->with('success', 'Pembayaran Berhasil!!');
+        if ($trans->user_id !== Auth::id()) {
+            abort(403, 'Akses tidak diizinkan.');
+        }
+
+        $trans->status = 'Paid';
+        $trans->save();
+
+        return redirect()->route('user.event.myEvent')->with('success', 'Pembayaran Berhasil! Anda telah terdaftar pada acara ini.');
     }
 
-    public function myEvent(){
-        $transactions = Transaction::where('user_id', Auth::user()->id)->where('status', 'Paid')->paginate(5);
+    public function myEvent()
+    {
+        $transactions = Transaction::with('event')
+            ->where('user_id', Auth::id())
+            ->where('status', 'Paid')
+            ->latest()
+            ->paginate(6);
+
         return view('user.transaction.index', compact('transactions'));
     }
 

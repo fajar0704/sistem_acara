@@ -1,41 +1,24 @@
 <div class="sidebar">
-    <h4 class="text-center py-3">Admin</h4>
+    <h4 class="text-center py-4 border-bottom border-secondary mb-3">Admin Panel</h4>
     <nav class="nav flex-column">
-        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
-            {{ __('Dashboard') }}
-        </x-nav-link>
-        <x-nav-link :href="route('admin.event')" :active="request()->routeIs('admin.event')">
-            {{ __('Acara') }}
-        </x-nav-link>
-        <x-nav-link :href="route('admin.transaction')" :active="request()->routeIs('admin.transaction')">
-            {{ __('Transaksi') }}
-        </x-nav-link>
-        <form method="POST" action="{{ route('logout') }}">
-          @csrf
-          <button type="submit" class="nav-link">Logout</button>
+        <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
+            Dashboard
+        </a>
+        <a class="nav-link {{ request()->routeIs('admin.event*') ? 'active' : '' }}" href="{{ route('admin.event') }}">
+            Kelola Acara
+        </a>
+        <a class="nav-link {{ request()->routeIs('admin.transaction*') ? 'active' : '' }}" href="{{ route('admin.transaction') }}">
+            Daftar Transaksi
+        </a>
+        <hr class="border-secondary my-3 mx-3">
+        <a class="nav-link text-info" href="{{ route('dashboard') }}">
+            &larr; Ke Website Utama
+        </a>
+        <form method="POST" action="{{ route('logout') }}" class="mt-2">
+            @csrf
+            <button type="submit" class="nav-link text-danger border-0 bg-transparent w-100 text-start">
+                Logout
+            </button>
         </form>
     </nav>
 </div>
-
-{{-- <nav class="navbar navbar-expand-lg" style="background-color: #e3f2fd;">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Navbar</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            
-          </li>
-          <li class="nav-item">
-           
-          </li>
-        </ul>   
-      </div>
-      <form method="POST" action="{{ route('logout') }}">
-        @csrf
-        <button type="submit" class="btn btn-danger">Logout</button>
-      </form>
-    </div>
-  </nav> --}}

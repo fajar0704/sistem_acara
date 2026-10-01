@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    $events = Event::take(3)->get();
+    $events = Event::query()->latest()->take(3)->get();
     return view('welcome', compact('events'));
 });
 
 Route::get('/dashboard', function () {
-    $events = Event::take(3)->get();
+    $events = Event::query()->latest()->take(6)->get();
     return view('user.dashboard', compact('events'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -34,22 +34,23 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('admin/dashboard', [AdminController::class, 'index'])->middleware('admin')->name('admin.dashboard');
-    Route::get('admin/event', [EventController::class, 'index'])->middleware('admin')->name('admin.event');
-    Route::get('admin/event/create', [EventController::class, 'create'])->middleware('admin')->name('admin.event.create');
-    Route::post('admin/event/', [EventController::class, 'store'])->middleware('admin')->name('admin.event.store');
-    Route::get('admin/event/edit/{slug}', [EventController::class, 'edit'])->middleware('admin')->name('admin.event.edit');
-    Route::put('admin/event/{event}', [EventController::class, 'update'])->middleware('admin')->name('admin.event.update');
-    Route::get('admin/event/{event}', [EventController::class, 'destroy'])->middleware('admin')->name('admin.event.destroy');
-    Route::get('admin/event/detail/{slug}', [EventController::class, 'detail'])->middleware('admin')->name('admin.event.detail');
-    Route::get('admin/transactions', [TransactionController::class, 'index'])->middleware('admin')->name('admin.transaction');
-
+    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+        Route::get('/event', [EventController::class, 'index'])->name('event');
+        Route::get('/event/create', [EventController::class, 'create'])->name('event.create');
+        Route::post('/event', [EventController::class, 'store'])->name('event.store');
+        Route::get('/event/edit/{slug}', [EventController::class, 'edit'])->name('event.edit');
+        Route::put('/event/{event}', [EventController::class, 'update'])->name('event.update');
+        Route::match(['get', 'delete'], '/event/delete/{event}', [EventController::class, 'destroy'])->name('event.destroy');
+        Route::get('/event/detail/{slug}', [EventController::class, 'detail'])->name('event.detail');
+        Route::get('/transactions', [TransactionController::class, 'index'])->name('transaction');
+    });
 
     Route::get('events', [EventUserController::class, 'index'])->name('user.event');
     Route::get('events/{slug}', [EventUserController::class, 'payment'])->name('user.event.payment');
     Route::get('events/success/{trans}', [EventUserController::class, 'success'])->name('user.event.success');
-    Route::get('myevents/', [EventUserController::class, 'myEvent'])->name('user.event.myEvent');
-    Route::get('about/', [EventUserController::class, 'about'])->name('user.about');
+    Route::get('myevents', [EventUserController::class, 'myEvent'])->name('user.event.myEvent');
+    Route::get('about', [EventUserController::class, 'about'])->name('user.about');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

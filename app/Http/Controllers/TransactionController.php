@@ -9,7 +9,7 @@ class TransactionController extends Controller
 {
     public function index()
     {
-        $transactions = Transaction::get();
+        $transactions = Transaction::with(['user', 'event'])->latest()->get();
         return view('admin.transaction.index', compact('transactions'));
     }
 }

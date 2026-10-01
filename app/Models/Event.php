@@ -16,10 +16,22 @@ class Event extends Model
         'end',
         'description',
         'price',
+        'photo',
+        'status',
     ];
 
-    public function transaction():HasMany
+    protected $casts = [
+        'start' => 'date',
+        'end' => 'date',
+    ];
+
+    public function transactions(): HasMany
     {
-        return $this->hasMany(Event::class);
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function transaction(): HasMany
+    {
+        return $this->transactions();
     }
 }
